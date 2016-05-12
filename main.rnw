@@ -1,10 +1,13 @@
-%% Time-stamp: <2016-05-12 18:19:48 chl>
+%% Time-stamp: <2016-05-12 21:47:31 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
 \usepackage{bera}
+\usepackage{eulervm}
 \usepackage{xspace}
 \usepackage{ctable}
+\usepackage{booktabs}
+\usepackage{subfig}
 \usepackage[utf8]{inputenc}
 \usepackage[compress]{natbib}
 \newcommand{\R}{\textsf{R}\xspace}
@@ -17,15 +20,40 @@
 
 <<setup, include=FALSE, purl=FALSE>>=
 require(knitr)
+knit_hooks$set(document = function(x) {sub('\\usepackage[]{color}', '\\usepackage{xcolor}', x, fixed = TRUE)})
 opts_chunk$set(cache=TRUE, fig.align="center", message=FALSE, warning=FALSE, size="small",
                dev = "cairo_pdf", dev.args = list(family = "Bitstream Vera Sans"))
 library(Hmisc)
+library(xtable)
 library(rms)
 library(reshape2)
 library(ggplot2)
 library(plyr)
 theme_set(theme_bw())
 @ 
+
+\section*{Foreword}
+
+Statistical analysis are done using sessionInfo()$R.version$version.string,
+which is freely available from \href{http://cran.r-project.org}{CRAN}. You may
+find convenient to run \R through \href{http://www.rstudio.com}{RStudio}.
+RStudio offers really great support for editing and running \R scripts. You can
+even organize your work into a project, with version control and automatic
+reporting built on the fly. I personally choose to work like in the 80s--
+although I was just a kid at that time--with a simple text editor and an
+interactive shell available within few key presses. This is possible thanks to
+\href{https://www.gnu.org/software/emacs/}{Emacs} and the brilliant
+\href{http://ess.r-project.org}{ESS} mode.
+
+I replicated all SAS code using
+\href{https://www.sas.com/en_us/software/university-edition.html}{SAS University
+  Edition}. It can run locally on your computer (using, e.g.,
+\href{https://www.virtualbox.org}{Virtual Box}) or directly in the cloud. I do
+not hold a personal licence for SAS (although I could get from several
+universities where I am teaching) and so I found this solution particularly
+handy to compare SAS and R output.
+
+
 
 \section{Analysis of Clinical Trials using SAS}
 
@@ -76,10 +104,13 @@ we need to handle the proper conversion of \texttt{change} to numerical values.
 Also, note that we set the reference category to the Placebo group to simplify
 things a bit.
 
-Some basic exploratory graphical analysis follows. In the following code, we
-display the raw data for each centre and highlight the difference between drug
-and placebo using a trend line.
-<<fig.width=6, fig.height=3>>=
+Some basic exploratory graphical analysis follows. In the next chunk, we display
+the raw data for each centre and highlight the difference between drug and
+placebo using a trend line (Figure~\ref{fig:hamd-xyplot}). Note the use of
+\texttt{aes(group = 1)} when calling \texttt{geom\_smooth} as there is no real
+grouping variable in the data structure other than the ones that are already
+used (\texttt{drug} on the $x$-axis and \texttt{center} for facetting).
+<<hamd-xyplot, fig.cap="Distribution of change scores in each centre", fig.width=6, fig.height=3>>=
 p <- ggplot(data = d, aes(x = drug, y = change))
 p <- p + geom_jitter(width = .2)
 p <- p + geom_smooth(aes(group = 1), method = "lm", se = FALSE, colour = "grey30")
@@ -88,7 +119,7 @@ p + facet_grid(~ center) + labs(x = "Drug type", y = "HAMD17 change")
 
 Using \texttt{Hmisc} package, we can easily build a Table of summary statistics
 by drug and center. For simplicity, we will limit the display to the first 3
-centers. 
+centers in Table~\ref{tab:hamd-desc}. 
 <<>>=
 fm <- change ~ drug + center
 s <- summary(fm, data = subset(d, center %in% c("100","101","102")), 
@@ -103,8 +134,14 @@ latex(s, file = "", title = "", caption = "Mean HAMD17 change by drug, center",
 @ 
 
 
-Now, let's consider average change score by center.
-<<fig.width=6, fig.height=3>>=
+Now, let's consider average change scores by center, which are displayed in
+Figure~\ref{fig:hamd-delta}. First, we need to compute the average score in each
+group, and then compute the difference between the two (called \texttt{delta}).
+This could be done with Hmisc \texttt{summarize} command, but we will rely on
+the \texttt{plyr} package and its \texttt{ddply} command. What is important is
+that the results are returned as a data frame to facilitate the use of
+\texttt{ggplot} data structure in turn.
+<<hamd-delta, fig.cap="Average difference between drug and placebo in each centre", fig.width=6, fig.height=3>>=
 r <- ddply(d, "center", summarize, 
            delta = mean(change[drug == "D"]) - mean(change[drug == "P"]))
 p <- ggplot(data = r, aes(x = center, y = delta))
@@ -113,9 +150,14 @@ p + labs(x = "Center", y = "Difference D-P")
 @ 
 
 
-Modeling step.
+Now comes the modeling stage. First, we will analyse the primary endpoint using
+fixed-effect models. \citet{dmitrienko05} provide all the maths that are
+necessary to understand how to derive various types of sum of squares, and this
+is further addressed in, e.g., REF., or on
+\href{http://crossvalidated.com}{Stack Exchange}.
+% FIXME: add references
 
-Let us update the formula we used for producing Table~\ref{tab:hamd-desc} to
+Let us first update the formula we used for producing Table~\ref{tab:hamd-desc} to
 incorporate an interaction term, \texttt{drug:center} (in \R, \texttt{drug *
   center} will expand to \texttt{drug + center + drug:center}):
 <<>>=
@@ -128,9 +170,11 @@ replications(change ~ drug:center, data = d)
 As can be seen, data are slightly imbalanced for all but centre 101.
 
 By default, \R computes so-called ``sequential'' Type I sum of squares (SS), and
-here is what we get when using a standard combination of \texttt{lm} and
-\texttt{anova}:
+here is what we get when using a standard combination of \texttt{lm} (to compute
+parameter estimates) and \texttt{anova} (to build the ANOVA table for the
+regression model):
 <<>>=
+options(contrasts = c("contr.sum", "contr.poly"))
 m <- lm(fm, data = d)
 anova(m)
 @ 
@@ -144,16 +188,58 @@ car::Anova(m, type = "II")
 @ 
 
 Type III analysis is readily obtained by replacing \texttt{type = "II"} with
-\texttt{type = "III"} as shown below:
+\texttt{type = "III"} as shown in the next code block. It should be noted that
+without altering the default contrast treatment that are used by \R, as we did
+in the above chunk, we would not get the correct results for the Type III
+analysis.
 <<>>=
 car::Anova(m, type ="III")
 @ 
 Note that in the case of Type III SS, we can also use the base command
 \texttt{drop1} and we will get similar results:
 <<>>=
-## options(contrasts = c("contr.sum", "contr.poly"))
 drop1(m, scope = ~ ., test = "F")
 @ 
+
+To sum up, the results from the different approaches are exposed in
+Table~\ref{tab:hamd-fixeff}. 
+
+<<echo=FALSE>>=
+print(xtable(anova(m)), file = "s1.tex", floating = FALSE, booktabs = TRUE)
+print(xtable(car::Anova(m, type = "II")), file = "s2.tex", floating = FALSE, booktabs = TRUE)
+print(xtable(car::Anova(m, type = "III")[-1,]), file = "s3.tex", floating = FALSE, booktabs = TRUE)
+@ 
+
+
+\paragraph{Sidenote.} Here is how we could compute the parameter estimates and
+the SS corresponding to the drug effect in the case of a Type III analysis. The
+code follows that posted on
+\href{http://stats.stackexchange.com/a/69367/930}{Stack Exchange}, with minor
+adaptation. How this works is quite simple: We first get the design matrix
+stored in our model \texttt{m} and then solve the ``normal equations''
+$(X'X)\hat\beta=X'y$ in order to get $\hat\beta=(X'X)^{-1}X'y$. 
+<<>>=
+D <- model.matrix(m)                            ## design matrix
+bhat <- solve(t(D) %*% D) %*% t(D) %*% d$change ## beta parameters
+get.ss <- function(C) {
+  require(MASS)
+  teta <- C%*%bhat
+  M <- C %*% ginv(t(D)%*%D) %*% t(C)
+  SSH <- t(teta) %*% ginv(M) %*% teta
+  return(as.numeric(SSH))
+}
+## SS(drug|center,drug:center)
+get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10)) 
+@ 
+
+\begin{table}[!htbp]
+\centering
+\subfloat[Type I SS]{\label{tab:tab1a}\scalebox{.58}{\input{./s1}}}\quad
+\subfloat[Type II SS]{\label{tab:tab1b}\scalebox{.58}{\input{./s2}}}
+\subfloat[Type III SS]{\label{tab:tab1c}\scalebox{.58}{\input{./s3}}}
+\caption{Overview of fixed-effects analysis for the HAMD17 study}
+\label{tab:hamd-fixeff}
+\end{table}
 
 \clearpage
 \bibliographystyle{plainnat}

@@ -21,7 +21,7 @@ names(d) <- c("center", "drug", "change")
 d$change <- as.numeric(as.character(d$change))
 d$drug <- relevel(d$drug, ref = "P")
 
-## ----fig.width=6, fig.height=3-------------------------------------------
+## ----hamd-xyplot, fig.cap="Distribution of change scores in each centre", fig.width=6, fig.height=3----
 p <- ggplot(data = d, aes(x = drug, y = change))
 p <- p + geom_jitter(width = .2)
 p <- p + geom_smooth(aes(group = 1), method = "lm", se = FALSE, colour = "grey30")
@@ -38,7 +38,7 @@ latex(s, file = "", title = "", caption = "Mean HAMD17 change by drug, center",
       insert.bottom = "Only 3 out of 5 centres are shown.", 
       table.env = TRUE, ctable = TRUE, size = "small", digits = 2)
 
-## ----fig.width=6, fig.height=3-------------------------------------------
+## ----hamd-delta, fig.cap="Average difference between drug and placebo in each centre", fig.width=6, fig.height=3----
 r <- ddply(d, "center", summarize, 
            delta = mean(change[drug == "D"]) - mean(change[drug == "P"]))
 p <- ggplot(data = r, aes(x = center, y = delta))
@@ -52,6 +52,7 @@ fm <- change ~ drug * center
 replications(change ~ drug:center, data = d)
 
 ## ------------------------------------------------------------------------
+options(contrasts = c("contr.sum", "contr.poly"))
 m <- lm(fm, data = d)
 anova(m)
 
@@ -62,6 +63,23 @@ car::Anova(m, type = "II")
 car::Anova(m, type ="III")
 
 ## ------------------------------------------------------------------------
-## options(contrasts = c("contr.sum", "contr.poly"))
 drop1(m, scope = ~ ., test = "F")
+
+## ----echo=FALSE----------------------------------------------------------
+print(xtable(anova(m)), file = "s1.tex", floating = FALSE, booktabs = TRUE)
+print(xtable(car::Anova(m, type = "II")), file = "s2.tex", floating = FALSE, booktabs = TRUE)
+print(xtable(car::Anova(m, type = "III")[-1,]), file = "s3.tex", floating = FALSE, booktabs = TRUE)
+
+## ------------------------------------------------------------------------
+D <- model.matrix(m)                            ## design matrix
+bhat <- solve(t(D) %*% D) %*% t(D) %*% d$change ## beta parameters
+get.ss <- function(C) {
+  require(MASS)
+  teta <- C%*%bhat
+  M <- C %*% ginv(t(D)%*%D) %*% t(C)
+  SSH <- t(teta) %*% ginv(M) %*% teta
+  return(as.numeric(SSH))
+}
+## SS(drug|center,drug:center)
+get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10)) 
 
