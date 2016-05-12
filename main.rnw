@@ -1,24 +1,21 @@
-%% Time-stamp: <2016-05-12 13:35:01 chl>
-
-
-
+%% Time-stamp: <2016-05-12 18:19:48 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
+\usepackage{gitinfo}
 \usepackage{bera}
 \usepackage{xspace}
 \usepackage{ctable}
 \usepackage[utf8]{inputenc}
-\usepackage[super,compress]{natbib}
+\usepackage[compress]{natbib}
 \newcommand{\R}{\textsf{R}\xspace}
-
-% \ifdefined\kframe
-%   \renewenvironment{kframe}{\begin{small}}{\end{small}}
-% \else
-% \fi
+\usepackage[parfill]{parskip}
+\setlength\parindent{0pt}
+\usepackage{hyperref}
+\hypersetup{colorlinks=false, pagebackref=true}
 
 \begin{document}
 
-<<setup, echo=FALSE, include=FALSE>>=
+<<setup, include=FALSE, purl=FALSE>>=
 require(knitr)
 opts_chunk$set(cache=TRUE, fig.align="center", message=FALSE, warning=FALSE, size="small",
                dev = "cairo_pdf", dev.args = list(family = "Bitstream Vera Sans"))
@@ -32,6 +29,9 @@ theme_set(theme_bw())
 
 \section{Analysis of Clinical Trials using SAS}
 
+The following analyses are based on \cite{dmitrienko05}, with data avalaible
+online at \href{https://goo.gl/F5xfWq}{Analysis of Clinical Trials Using SAS: A Practical Guide}.
+
 \subsection{The HAMD17 study}
 
 \paragraph{Context.} This is a multicenter clinical trial comparing experimental
@@ -43,8 +43,8 @@ This is a classical application of unbalanced design and potential heterogeneity
 between clinical centres, where there is an unequal number of observations per
 treatment (here, drug by center).
 
-Here are some ideas to get the data right into \R:
-<<>>=
+Here is one of many ways to get the data right into \R:
+<<01-load>>=
 raw <- textConnection("
 100 P 18 100 P 14 100 D 23 100 D 18 100 P 10 100 P 17 100 D 18 100 D 22
 100 P 13 100 P 12 100 D 28 100 D 21 100 P 11 100 P  6 100 D 11 100 D 25
@@ -67,10 +67,18 @@ names(d) <- c("center", "drug", "change")
 d$change <- as.numeric(as.character(d$change))
 d$drug <- relevel(d$drug, ref = "P")
 @ 
+Briefly, the idea is to copy and paste the SAS \texttt{DATALINES} instruction as
+raw text and to \texttt{scan} the flow of characters. The next bit of code uses
+\texttt{matrix} to arrange the data into a tabular dataset with 3 columns
+corresponding to center, drug and change score. When transforming this table to
+a data frame, \texttt{center} and \texttt{drug} will be converted to factors but
+we need to handle the proper conversion of \texttt{change} to numerical values.
+Also, note that we set the reference category to the Placebo group to simplify
+things a bit.
 
-Some basic exploratory graphical analysis. In the following code, we display the
-raw data for each centre and highlight the difference between drug and placebo
-using a trend line.
+Some basic exploratory graphical analysis follows. In the following code, we
+display the raw data for each centre and highlight the difference between drug
+and placebo using a trend line.
 <<fig.width=6, fig.height=3>>=
 p <- ggplot(data = d, aes(x = drug, y = change))
 p <- p + geom_jitter(width = .2)
@@ -78,8 +86,9 @@ p <- p + geom_smooth(aes(group = 1), method = "lm", se = FALSE, colour = "grey30
 p + facet_grid(~ center) + labs(x = "Drug type", y = "HAMD17 change") 
 @ 
 
-Using \texttt{Hmisc} package.
-
+Using \texttt{Hmisc} package, we can easily build a Table of summary statistics
+by drug and center. For simplicity, we will limit the display to the first 3
+centers. 
 <<>>=
 fm <- change ~ drug + center
 s <- summary(fm, data = subset(d, center %in% c("100","101","102")), 
@@ -87,10 +96,10 @@ s <- summary(fm, data = subset(d, center %in% c("100","101","102")),
 @ 
 
 <<echo=FALSE, results="asis">>=
-latex(s, file="", title="", caption="Mean HAMD17 change by drug, center", 
-      first.hline.double=FALSE, where="!htbp",
-      insert.bottom="Only 3 out of 5 centres are shown.", 
-      table.env=TRUE, ctable = TRUE, size = "small", digits = 2)
+latex(s, file = "", title = "", caption = "Mean HAMD17 change by drug, center", 
+      first.hline.double = FALSE, where = "!htbp", label = "tab:hamd-desc",
+      insert.bottom = "Only 3 out of 5 centres are shown.", 
+      table.env = TRUE, ctable = TRUE, size = "small", digits = 2)
 @ 
 
 
@@ -106,23 +115,23 @@ p + labs(x = "Center", y = "Difference D-P")
 
 Modeling step.
 
-% <<>>=
-% dd <- datadist(d)
-% options(datadist = "dd")
-% m <- ols(change ~ drug * center, d)
-% @ 
+Let us update the formula we used for producing Table~\ref{tab:hamd-desc} to
+incorporate an interaction term, \texttt{drug:center} (in \R, \texttt{drug *
+  center} will expand to \texttt{drug + center + drug:center}):
+<<>>=
+fm <- change ~ drug * center
+@ 
 
-% <<echo=FALSE, results="asis">>=
-% latex(summary(m), file="", title="", 
-%       first.hline.double=FALSE, where="!htbp",
-%       table.env=TRUE, ctable = TRUE, size = "small", digits = 2)
-% @ 
+<<>>=
+replications(change ~ drug:center, data = d)
+@ 
+As can be seen, data are slightly imbalanced for all but centre 101.
 
 By default, \R computes so-called ``sequential'' Type I sum of squares (SS), and
 here is what we get when using a standard combination of \texttt{lm} and
 \texttt{anova}:
 <<>>=
-m <- lm(change ~ drug * center, data = d)
+m <- lm(fm, data = d)
 anova(m)
 @ 
 
@@ -145,5 +154,24 @@ Note that in the case of Type III SS, we can also use the base command
 ## options(contrasts = c("contr.sum", "contr.poly"))
 drop1(m, scope = ~ ., test = "F")
 @ 
+
+\clearpage
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\clearpage
+\tableofcontents
+
+\clearpage
+\listoftables
+\listoffigures
+%% colophon
+\vspace*{\fill}
+\begin{flushright}
+  \small \Sexpr{sessionInfo()$R.version$version.string}\\
+  Version \gitVtags: \gitAbbrevHash{} (\gitAuthorDate)\\
+  \href{https://github.com/chlalanne/SAS2R}{https://github.com/chlalanne/SAS2R}
+\end{flushright}
+\end{document}
 
 \end{document}

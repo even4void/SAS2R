@@ -1,15 +1,4 @@
-## ----setup, echo=FALSE, include=FALSE------------------------------------
-require(knitr)
-opts_chunk$set(cache=TRUE, fig.align="center", message=FALSE, warning=FALSE, size="small",
-               dev = "cairo_pdf", dev.args = list(family = "Bitstream Vera Sans"))
-library(Hmisc)
-library(rms)
-library(reshape2)
-library(ggplot2)
-library(plyr)
-theme_set(theme_bw())
-
-## ------------------------------------------------------------------------
+## ----01-load-------------------------------------------------------------
 raw <- textConnection("
 100 P 18 100 P 14 100 D 23 100 D 18 100 P 10 100 P 17 100 D 18 100 D 22
 100 P 13 100 P 12 100 D 28 100 D 21 100 P 11 100 P  6 100 D 11 100 D 25
@@ -44,10 +33,10 @@ s <- summary(fm, data = subset(d, center %in% c("100","101","102")),
              method = "cross", fun = smean.sd)
 
 ## ----echo=FALSE, results="asis"------------------------------------------
-latex(s, file="", title="", caption="Mean HAMD17 change by drug, center", 
-      first.hline.double=FALSE, where="!htbp",
-      insert.bottom="Only 3 out of 5 centres are shown.", 
-      table.env=TRUE, ctable = TRUE, size = "small", digits = 2)
+latex(s, file = "", title = "", caption = "Mean HAMD17 change by drug, center", 
+      first.hline.double = FALSE, where = "!htbp", label = "tab:hamd-desc",
+      insert.bottom = "Only 3 out of 5 centres are shown.", 
+      table.env = TRUE, ctable = TRUE, size = "small", digits = 2)
 
 ## ----fig.width=6, fig.height=3-------------------------------------------
 r <- ddply(d, "center", summarize, 
@@ -57,7 +46,13 @@ p <- p + geom_point() + geom_hline(yintercept = 0, linetype = 2, colour = "grey3
 p + labs(x = "Center", y = "Difference D-P")
 
 ## ------------------------------------------------------------------------
-m <- lm(change ~ drug * center, data = d)
+fm <- change ~ drug * center
+
+## ------------------------------------------------------------------------
+replications(change ~ drug:center, data = d)
+
+## ------------------------------------------------------------------------
+m <- lm(fm, data = d)
 anova(m)
 
 ## ------------------------------------------------------------------------
