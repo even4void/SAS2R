@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-12 21:47:31 chl>
+%% Time-stamp: <2016-05-13 14:31:37 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -240,6 +240,44 @@ get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10))
 \caption{Overview of fixed-effects analysis for the HAMD17 study}
 \label{tab:hamd-fixeff}
 \end{table}
+
+
+\subsection{The Severe sepsis trial}
+
+\paragraph{Context.} This is a placebo-controlled RCT examining the effect of an
+experimental drug on 28-day all-cause mortality in patients with severe sepsis.
+Patients were allocated to one of four strata depending on their APACHE II score.
+
+This is a classical application of stratified analysis of a binary outcome
+(dead/alive). 
+
+To enter the data in \R, we will input individual values of the three-way Table
+of events as an array. Note that it would also be possible to create two matrix
+objects and then bind into to a 3-dimensional table. In what follows, we write
+data for the treated group first. Note that when using \texttt{array}, data
+should be entered column-wise (there is no \texttt{byrow =} option as in
+\texttt{matrix}). 
+<<02-load>>=
+varnames <- list(strata = 1:4,
+                 status = c("Dead", "Alive", "Total"),
+                 group = c("Experimental", "Placebo"))
+                 
+d <- array(c(33,49,48,80,185,169,156,130,218,218,204,210,
+             26,57,58,118,189,165,104,123,215,222,162,241),
+           dim = c(4,3,2), dimnames = varnames)
+@ 
+Note also that the third column (``Total'') can be safely omitted as margins can be
+computed automatically with \R, e.g.:
+<<eval=FALSE>>=
+addmargins(d[,-3,], c(1,2))
+@ 
+
+An alternative representation of this three-way Table is provided by
+\texttt{ftable}, in long or wide format, see Table xx for the wide format:
+<<eval=1>>=
+ftable(d)
+ftable(d[,-3,], row.vars = 1, col.vars = c(3,2))
+@ 
 
 \clearpage
 \bibliographystyle{plainnat}

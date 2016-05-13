@@ -83,3 +83,19 @@ get.ss <- function(C) {
 ## SS(drug|center,drug:center)
 get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10)) 
 
+## ----02-load-------------------------------------------------------------
+varnames <- list(strata = 1:4,
+                 status = c("Dead", "Alive", "Total"),
+                 group = c("Experimental", "Placebo"))
+                 
+d <- array(c(33,49,48,80,185,169,156,130,218,218,204,210,
+             26,57,58,118,189,165,104,123,215,222,162,241),
+           dim = c(4,3,2), dimnames = varnames)
+
+## ----eval=FALSE----------------------------------------------------------
+## addmargins(d[,-3,], c(1,2))
+
+## ------------------------------------------------------------------------
+ftable(d)
+ftable(d[,-3,], row.vars = 1, col.vars = c(3,2))
+
