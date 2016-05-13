@@ -96,6 +96,23 @@ d <- array(c(33,49,48,80,185,169,156,130,218,218,204,210,
 ## addmargins(d[,-3,], c(1,2))
 
 ## ------------------------------------------------------------------------
+d <- d[,-3,]
+dim(d)
+
+## ------------------------------------------------------------------------
 ftable(d)
-ftable(d[,-3,], row.vars = 1, col.vars = c(3,2))
+
+## ----echo=FALSE, results="asis"------------------------------------------
+toLatex(ftable(d, row.vars = 1, col.vars = c(3,2)))
+
+## ----sepsis-dotplot, fig.cap="Proportion of patients who died by the end of the study", fig.width=6, fig.height=6----
+dd <- as.data.frame(ftable(d))
+r <- ddply(dd, c("strata", "group"), mutate, prop = Freq/sum(Freq))
+p <- ggplot(subset(r, status == "Dead"), aes(x = prop, y = group))
+p <- p + geom_point() + facet_wrap(~ strata, nrow = 2)
+p + scale_x_continuous(limits = c(0,0.5)) + labs(x = "Proportion deads", y = "")
+
+## ----sepsis-cotab, fig.cap="Conditional association plot", fig.width=8, fig.height=8, out.width=".75\\linewidth"----
+library(vcd)
+cotabplot(d, 1)
 

@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-13 14:31:37 chl>
+%% Time-stamp: <2016-05-13 18:40:56 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -7,6 +7,7 @@
 \usepackage{xspace}
 \usepackage{ctable}
 \usepackage{booktabs}
+\usepackage{dcolumn}
 \usepackage{subfig}
 \usepackage[utf8]{inputenc}
 \usepackage[compress]{natbib}
@@ -25,6 +26,7 @@ opts_chunk$set(cache=TRUE, fig.align="center", message=FALSE, warning=FALSE, siz
                dev = "cairo_pdf", dev.args = list(family = "Bitstream Vera Sans"))
 library(Hmisc)
 library(xtable)
+library(memisc)
 library(rms)
 library(reshape2)
 library(ggplot2)
@@ -272,11 +274,44 @@ computed automatically with \R, e.g.:
 addmargins(d[,-3,], c(1,2))
 @ 
 
-An alternative representation of this three-way Table is provided by
-\texttt{ftable}, in long or wide format, see Table xx for the wide format:
-<<eval=1>>=
+<<>>=
+d <- d[,-3,]
+dim(d)
+@ 
+
+An alternative representation of this array-based Table is provided by \R's flat
+tables (\texttt{ftable}), in long or wide format; see
+Table~\ref{tab:sepsis-desc} for the wide format using \texttt{ftable(d,
+  row.vars = 1, col.vars = c(3,2))}:
+<<>>=
 ftable(d)
-ftable(d[,-3,], row.vars = 1, col.vars = c(3,2))
+@ 
+
+% NOTE: We could use xtable(format(...)) instead of memisc::toLatex but this
+% would need additional formatting
+\begin{table}[!htbp]
+\centering
+<<echo=FALSE, results="asis">>=
+toLatex(ftable(d, row.vars = 1, col.vars = c(3,2)))
+@ 
+\caption{28-day mortality data from the 1690-patient sepsis study}
+\label{tab:sepsis-desc}
+\end{table}
+
+The following code is used to depict the situation in graphical terms:
+<<sepsis-dotplot, fig.cap="Proportion of patients who died by the end of the study", fig.width=6, fig.height=6>>=
+dd <- as.data.frame(ftable(d))
+r <- ddply(dd, c("strata", "group"), mutate, prop = Freq/sum(Freq))
+p <- ggplot(subset(r, status == "Dead"), aes(x = prop, y = group))
+p <- p + geom_point() + facet_wrap(~ strata, nrow = 2)
+p + scale_x_continuous(limits = c(0,0.5)) + labs(x = "Proportion deads", y = "")
+@ 
+
+
+% FIXME: say someting about panel = {cotab_assoc | cotab_coindep
+<<sepsis-cotab, fig.cap="Conditional association plot", fig.width=8, fig.height=8, out.width=".75\\linewidth">>=
+library(vcd)
+cotabplot(d, 1)
 @ 
 
 \clearpage
