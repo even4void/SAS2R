@@ -7,6 +7,7 @@
 
 clear all
 
+/* maybe set your working directory near hear */
 import delimited "HAMD17.csv"
 
 encode drug, gen(drug_)
@@ -19,9 +20,11 @@ label variable change "HAMD17 change"
 /* stripplot (N. Cox) available on SSC */
 stripplot change, over(drug) by(center) vertical jitter(1 0)
 
+/* summary statistics */
 table drug center, contents(count change mean change sd change) column format(%5.1f)
 
-
-anova change drug##center, sequential
-
+/* two-way ANOVA
+ * Stata does not offer type II SS, the defualt are type III (like SAS)
+ */
+anova change drug##center, sequential 
 anova change drug##center
