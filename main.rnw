@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-13 18:40:56 chl>
+%% Time-stamp: <2016-05-15 22:30:32 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -55,12 +55,16 @@ not hold a personal licence for SAS (although I could get from several
 universities where I am teaching) and so I found this solution particularly
 handy to compare SAS and R output.
 
+In addition, I provide Stata code to replicate most if not all analyses
+described in this document. The code has been tested with Stata 13 but should
+work on any version > 10.
 
 
 \section{Analysis of Clinical Trials using SAS}
 
 The following analyses are based on \cite{dmitrienko05}, with data avalaible
-online at \href{https://goo.gl/F5xfWq}{Analysis of Clinical Trials Using SAS: A Practical Guide}.
+online at \href{https://goo.gl/F5xfWq}{Analysis of Clinical Trials Using SAS: A
+  Practical Guide}. 
 
 \subsection{The HAMD17 study}
 
@@ -181,10 +185,11 @@ m <- lm(fm, data = d)
 anova(m)
 @ 
 
-The \texttt{car} package allows to work with Type II and Type III SS, the later
-(Yates' weighted squares of means) being the default under SPSS or SAS. So, if
-we are interested in Type II sum of squares
-
+The \texttt{car} package allows to work with Type II and Type III SS. Type III
+SSs, also called partial or Yates' weighted squares of means are the default in
+Stata, SPSS or SAS. Stata does not even offer Type II SS.
+So, if we are interested in computing Type II sum of squares in \R, we could
+call \texttt{Anova} like this:
 <<>>=
 car::Anova(m, type = "II")
 @ 
@@ -248,7 +253,8 @@ get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10))
 
 \paragraph{Context.} This is a placebo-controlled RCT examining the effect of an
 experimental drug on 28-day all-cause mortality in patients with severe sepsis.
-Patients were allocated to one of four strata depending on their APACHE II score.
+Patients were allocated to one of four strata depending on their APACHE II score
+\citep{knaus85}.
 
 This is a classical application of stratified analysis of a binary outcome
 (dead/alive). 
