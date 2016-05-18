@@ -1,4 +1,4 @@
-## Time-stamp: <2016-05-18 16:30:47 chl>
+## Time-stamp: <2016-05-18 17:25:04 chl>
 
 raw <- textConnection("
 Placebo  1  -86  -38   43 -100  289    0  -78   38  -80  -25
@@ -30,3 +30,4 @@ d <- data.frame(group = rep(c("Placebo", "Drug"), c(100, 100)),
 d$change <- tmp
 rm(raw,tmp)
 d$group <- relevel(d$group, ref = "Placebo")
+d$strata <- factor(d$strata)

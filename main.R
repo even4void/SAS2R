@@ -110,6 +110,9 @@ p <- ggplot(data = d, aes(x = change, colour = group))
 p <- p + geom_line(stat = "density", adjust = 1.2) + facet_grid(~ strata)
 p + scale_x_continuous(limits = c(-100, 150)) + labs(x = "Percent change", y = "Density")
 
+## ------------------------------------------------------------------------
+coin::independence_test(change ~ group | strata, data = d)
+
 ## ----03-load-------------------------------------------------------------
 varnames <- list(strata = 1:4,
                  status = c("Dead", "Alive", "Total"),

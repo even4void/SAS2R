@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-18 17:01:02 chl>
+%% Time-stamp: <2016-05-18 23:55:38 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -39,14 +39,15 @@ theme_set(theme_bw())
 
 \section*{Foreword}
 
-Statistical analysis are done using sessionInfo()$R.version$version.string,
-which is freely available from \href{http://cran.r-project.org}{CRAN}. You may
-find convenient to run \R through \href{http://www.rstudio.com}{RStudio}.
-RStudio offers really great support for editing and running \R scripts. You can
-even organize your work into a project, with version control and automatic
-reporting built on the fly. I personally choose to work like in the 80s--
-although I was just a kid at that time--with a simple text editor and an
-interactive shell available within few key presses. This is possible thanks to
+Statistical analysis carried outwere done using
+\Sexpr{sessionInfo()$R.version$version.string}, which is freely available from
+\href{http://cran.r-project.org}{CRAN}. You may find convenient to run \R
+through \href{http://www.rstudio.com}{RStudio}. RStudio offers really great
+support for editing and running \R scripts. You can even organize your work into
+a project, with version control and automatic reporting built on the fly. I
+personally choose to work like in the 80s-- although I was just a kid at that
+time--with a simple text editor and an interactive shell available within few
+key presses. This is possible thanks to
 \href{https://www.gnu.org/software/emacs/}{Emacs} and the brilliant
 \href{http://ess.r-project.org}{ESS} mode.
 
@@ -54,7 +55,7 @@ I replicated all SAS code using
 \href{https://www.sas.com/en_us/software/university-edition.html}{SAS University
   Edition}. It can run locally on your computer (using, e.g.,
 \href{https://www.virtualbox.org}{Virtual Box}) or directly in the cloud. I do
-not hold a personal licence for SAS (although I could get from several
+not hold a personal licence for SAS (although I could get one from several
 universities where I am teaching) and so I found this solution particularly
 handy to compare SAS and R output.
 
@@ -80,7 +81,7 @@ This is a classical application of unbalanced design and potential heterogeneity
 between clinical centres, where there is an unequal number of observations per
 treatment (here, drug by center).
 
-Here is one of many ways to get the data right into \R:
+Here is one of many ways to get data right into \R:
 <<01-load>>=
 raw <- textConnection("
 100 P 18 100 P 14 100 D 23 100 D 18 100 P 10 100 P 17 100 D 18 100 D 22
@@ -294,6 +295,18 @@ we use the rather generic \texttt{geom\_lines} with an extra \texttt{stat=} para
 p <- ggplot(data = d, aes(x = change, colour = group))
 p <- p + geom_line(stat = "density", adjust = 1.2) + facet_grid(~ strata)
 p + scale_x_continuous(limits = c(-100, 150)) + labs(x = "Percent change", y = "Density")
+@ 
+
+The authors used the van Elteren test \citep{elteren60}, which can be regarded
+as an extension of the Wilcoxon rank sum test for stratified data where larger
+weights are assigned to rank sums from smaller strata. An alternative is the
+``aligned rank test'' proposed by \cite{hodges62} as discussed by
+\cite{mehrotra10}. In \R, there is an old version that is
+\href{https://stat.ethz.ch/pipermail/r-help/2005-August/078171.html}{mentionned
+  on the \R listserve} (August 2005), but for now we will use the \texttt{coin}
+package as shown below:
+<<>>=
+coin::independence_test(change ~ group | strata, data = d)
 @ 
 
 \subsection{The Severe sepsis trial}
