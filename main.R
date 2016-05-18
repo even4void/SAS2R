@@ -1,3 +1,13 @@
+## ----echo=FALSE----------------------------------------------------------
+library(Hmisc)
+library(xtable)
+library(memisc)
+library(rms)
+library(reshape2)
+library(ggplot2)
+library(plyr)
+theme_set(theme_bw())
+
 ## ----01-load-------------------------------------------------------------
 raw <- textConnection("
 100 P 18 100 P 14 100 D 23 100 D 18 100 P 10 100 P 17 100 D 18 100 D 22
@@ -84,6 +94,23 @@ get.ss <- function(C) {
 get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10)) 
 
 ## ----02-load-------------------------------------------------------------
+source("./urininc.R")
+str(d)
+
+## ------------------------------------------------------------------------
+s <- summary(change ~ group + strata, data = d, method = "cross", overall = FALSE)
+
+## ----echo=FALSE, results="asis"------------------------------------------
+latex(s, file = "", title = "", caption = "Mean change in number of incontinence episods by drug, strata", 
+      first.hline.double = FALSE, where = "!htbp", label = "tab:urininc-desc",
+      table.env = TRUE, ctable = TRUE, size = "small", digits = 3)
+
+## ----urininc-density, fig.cap="Density estimates for the percent change in frequency of incontinence episodes", fig.width=9, fig.height=3----
+p <- ggplot(data = d, aes(x = change, colour = group))
+p <- p + geom_line(stat = "density", adjust = 1.2) + facet_grid(~ strata)
+p + scale_x_continuous(limits = c(-100, 150)) + labs(x = "Percent change", y = "Density")
+
+## ----03-load-------------------------------------------------------------
 varnames <- list(strata = 1:4,
                  status = c("Dead", "Alive", "Total"),
                  group = c("Experimental", "Placebo"))

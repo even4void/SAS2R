@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-15 22:30:32 chl>
+%% Time-stamp: <2016-05-18 17:01:02 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -24,6 +24,9 @@ require(knitr)
 knit_hooks$set(document = function(x) {sub('\\usepackage[]{color}', '\\usepackage{xcolor}', x, fixed = TRUE)})
 opts_chunk$set(cache=TRUE, fig.align="center", message=FALSE, warning=FALSE, size="small",
                dev = "cairo_pdf", dev.args = list(family = "Bitstream Vera Sans"))
+@ 
+
+<<echo=FALSE>>=
 library(Hmisc)
 library(xtable)
 library(memisc)
@@ -249,6 +252,50 @@ get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10))
 \end{table}
 
 
+\subsection{The Urinary incontinence trial}
+
+\paragraph{Context.} This is a subset of data collected in an RCT on urinary
+incontinence where the primary endpoint was the percent change from baseline
+of number of incontinence episodes per week over an 8-week period. Patients were
+initially randomized into one of three strata depending on the baseline
+frequency of incontinence episodes.
+
+This is an example of the use of stratified non-parametric analysis.
+
+This time, we managed to get data in the right format using this little R
+script: \texttt{urininc.R}. Assuming it is located in the current working
+directory, we can \texttt{source} it into \R and we will get a data frame named
+\texttt{d}. 
+<<02-load>>=
+source("./urininc.R")
+str(d)
+@ 
+
+To summarize the data, we can again make use of \texttt{Hmisc} \texttt{summary}
+for ``crossed'' data.
+<<>>=
+s <- summary(change ~ group + strata, data = d, method = "cross", overall = FALSE)
+@ 
+
+<<echo=FALSE, results="asis">>=
+latex(s, file = "", title = "", caption = "Mean change in number of incontinence episods by drug, strata", 
+      first.hline.double = FALSE, where = "!htbp", label = "tab:urininc-desc",
+      table.env = TRUE, ctable = TRUE, size = "small", digits = 3)
+@ 
+
+As can be seen, there is a higher number of missing values in strata 2 (around
+20\% in both groups) and larger variations on average between the two group in
+the third strata. Next, we displayed the distribution of the percent change in
+frequency of incontinence episodes as density curves in
+Figure~\ref{fig:urininc-density}. Instead of relying on \texttt{geom\_density},
+we use the rather generic \texttt{geom\_lines} with an extra \texttt{stat=} parameter.
+
+<<urininc-density, fig.cap="Density estimates for the percent change in frequency of incontinence episodes", fig.width=9, fig.height=3>>=
+p <- ggplot(data = d, aes(x = change, colour = group))
+p <- p + geom_line(stat = "density", adjust = 1.2) + facet_grid(~ strata)
+p + scale_x_continuous(limits = c(-100, 150)) + labs(x = "Percent change", y = "Density")
+@ 
+
 \subsection{The Severe sepsis trial}
 
 \paragraph{Context.} This is a placebo-controlled RCT examining the effect of an
@@ -265,7 +312,7 @@ objects and then bind into to a 3-dimensional table. In what follows, we write
 data for the treated group first. Note that when using \texttt{array}, data
 should be entered column-wise (there is no \texttt{byrow =} option as in
 \texttt{matrix}). 
-<<02-load>>=
+<<03-load>>=
 varnames <- list(strata = 1:4,
                  status = c("Dead", "Alive", "Total"),
                  group = c("Experimental", "Placebo"))
