@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-18 23:55:38 chl>
+%% Time-stamp: <2016-05-19 14:46:14 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -306,8 +306,22 @@ weights are assigned to rank sums from smaller strata. An alternative is the
   on the \R listserve} (August 2005), but for now we will use the \texttt{coin}
 package as shown below:
 <<>>=
-coin::independence_test(change ~ group | strata, data = d)
+library(coin)
+dc <- subset(d, complete.cases(d))
+independence_test(change ~ group | strata, data = dc, 
+                  ytrafo = function(data) trafo(data, numeric_trafo = rank, 
+                                                block = dc$strata), 
+                  teststat = "quad")
 @ 
+
+In comparison, a Type II or Type III ANOVA would yield non-significant result
+about the effect of drug on change scores.
+<<>>=
+m <- lm(change ~ group + strata, data = d)
+car::Anova(m, type = "II")
+car::Anova(m, type = "III")
+@ 
+
 
 \subsection{The Severe sepsis trial}
 

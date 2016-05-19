@@ -111,7 +111,17 @@ p <- p + geom_line(stat = "density", adjust = 1.2) + facet_grid(~ strata)
 p + scale_x_continuous(limits = c(-100, 150)) + labs(x = "Percent change", y = "Density")
 
 ## ------------------------------------------------------------------------
-coin::independence_test(change ~ group | strata, data = d)
+library(coin)
+dc <- subset(d, complete.cases(d))
+independence_test(change ~ group | strata, data = dc, 
+                  ytrafo = function(data) trafo(data, numeric_trafo = rank, 
+                                                block = dc$strata), 
+                  teststat = "quad")
+
+## ------------------------------------------------------------------------
+m <- lm(change ~ group + strata, data = d)
+car::Anova(m, type = "II")
+car::Anova(m, type = "III")
 
 ## ----03-load-------------------------------------------------------------
 varnames <- list(strata = 1:4,
