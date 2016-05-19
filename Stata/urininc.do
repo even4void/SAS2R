@@ -19,5 +19,7 @@ twoway (kdensity change if group == "Drug", bw(50) range(-100 150)) || (kdensity
 alignedranks change, by(group) strata(strata)
 
 /* Type III ANOVA */
+encode group, gen(drug)
+
 anova change group strata
 
