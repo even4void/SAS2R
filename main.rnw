@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-26 12:43:53 chl>
+%% Time-stamp: <2016-05-26 13:04:47 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -319,11 +319,21 @@ independence_test(change ~ group | strata, data = dc,
                   teststat = "quad")
 @ 
 
-In comparison, a Type II or Type III ANOVA would yield non-significant result
-about the effect of drug on change scores.
+Although we get different results from the authors, we would reach the same
+conclusion, namely that there is an effect of the treatment on the outcome after
+adjusting for the centre effect. We will get, however, closer results
+($p=0.02369$ for the row mean squares test statistic) if we simply remove the
+\texttt{scores=} option when calling SAS \texttt{PROC FREQ} \citep{stokes12}:
+\begin{verbatim}
+PROC FREQ;
+  TABLES strata*group*change / noprint cmh2;
+RUN;
+\end{verbatim}
+
+In comparison, as noted by the authors, a Type III ANOVA would yield
+non-significant result about the effect of drug on change scores.
 <<>>=
 m <- lm(change ~ group + strata, data = d)
-car::Anova(m, type = "II")
 car::Anova(m, type = "III")
 @ 
 

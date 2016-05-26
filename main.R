@@ -120,7 +120,6 @@ independence_test(change ~ group | strata, data = dc,
 
 ## ------------------------------------------------------------------------
 m <- lm(change ~ group + strata, data = d)
-car::Anova(m, type = "II")
 car::Anova(m, type = "III")
 
 ## ----03-load-------------------------------------------------------------
