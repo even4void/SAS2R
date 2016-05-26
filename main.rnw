@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-19 14:46:14 chl>
+%% Time-stamp: <2016-05-26 12:43:53 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -15,7 +15,12 @@
 \usepackage[parfill]{parskip}
 \setlength\parindent{0pt}
 \usepackage{hyperref}
-\hypersetup{colorlinks=false, pagebackref=true}
+\hypersetup{colorlinks=false, 
+            allbordercolors={0.7 0.7 0.7}, 
+            pdfborderstyle={/S/U/W 1}, 
+            pagebackref=true,
+            pdfauthor={Christophe Lalanne},
+            pdfkeywords={SAS, R, Stata, biostatistics, clinical trials}}
 
 \begin{document}
 
