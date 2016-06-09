@@ -155,3 +155,17 @@ p + scale_x_continuous(limits = c(0,0.5)) + labs(x = "Proportion deads", y = "")
 library(vcd)
 cotabplot(d, 1)
 
+## ------------------------------------------------------------------------
+n <- rbind(d[,1:2,1], d[,1:2,2])
+rownames(n) <- NULL
+n <- as.data.frame(n)
+n$strata <- gl(4, 1)
+n$group <- gl(2, 4, labels = c("Experimental", "Placebo"))
+n$group <- relevel(n$group, ref = "Placebo")
+m <- glm(cbind(Dead,Alive) ~ group + strata, data = n, family = binomial,
+         contrasts = list(strata = "contr.SAS"))
+car::Anova(m, type = "III")
+
+## ------------------------------------------------------------------------
+exp(confint(m))
+

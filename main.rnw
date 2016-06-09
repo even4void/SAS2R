@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-05-26 13:04:47 chl>
+%% Time-stamp: <2016-06-09 14:03:13 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -250,11 +250,11 @@ get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10))
 
 \begin{table}[!htbp]
 \centering
+\caption{Overview of fixed-effects analysis for the HAMD17 study}
+\label{tab:hamd-fixeff}
 \subfloat[Type I SS]{\label{tab:tab1a}\scalebox{.58}{\input{./s1}}}\quad
 \subfloat[Type II SS]{\label{tab:tab1b}\scalebox{.58}{\input{./s2}}}
 \subfloat[Type III SS]{\label{tab:tab1c}\scalebox{.58}{\input{./s3}}}
-\caption{Overview of fixed-effects analysis for the HAMD17 study}
-\label{tab:hamd-fixeff}
 \end{table}
 
 
@@ -407,6 +407,37 @@ p + scale_x_continuous(limits = c(0,0.5)) + labs(x = "Proportion deads", y = "")
 <<sepsis-cotab, fig.cap="Conditional association plot", fig.width=8, fig.height=8, out.width=".75\\linewidth">>=
 library(vcd)
 cotabplot(d, 1)
+@ 
+
+Based on a logistic regression model, the authors presented a summary of a Type
+III analysis of effects. Here is what can be done in R. First, we will slightly
+re arrange the data table so that we have a working data frame with total counts
+for success (here, dead patients) and failure (here, patients still alive) in
+separate columns, together with columns describing strata and treatment levels.
+<<>>=
+n <- rbind(d[,1:2,1], d[,1:2,2])
+rownames(n) <- NULL
+n <- as.data.frame(n)
+n$strata <- gl(4, 1)
+n$group <- gl(2, 4, labels = c("Experimental", "Placebo"))
+n$group <- relevel(n$group, ref = "Placebo")
+@ 
+Then, wince we are working with grouped or aggregated data, we will use the
+\texttt{cbind()} option to R's \texttt{glm}, as shown below. Note that we also
+ask to use SAS treatment contrast for the \texttt{strata} factor, in order to
+ensure that the fourth level is used as the reference category. Type III
+analysis is readily available within the \texttt{car} package.
+<<>>=
+m <- glm(cbind(Dead,Alive) ~ group + strata, data = n, family = binomial,
+         contrasts = list(strata = "contr.SAS"))
+car::Anova(m, type = "III")
+@ 
+
+Finally, profile likelihood 95\% confidence intervals are simply obtained using
+\texttt{confint()} which will call the appropriate profile method depending on
+the kind of model at hand.
+<<>>=
+exp(confint(m))
 @ 
 
 \clearpage
