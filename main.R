@@ -93,6 +93,13 @@ get.ss <- function(C) {
 ## SS(drug|center,drug:center)
 get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10)) 
 
+## ------------------------------------------------------------------------
+library(QualInt)
+with(d, qualint(change, drug, center, test = "LRT"))
+
+## ----hamd-ibga, echo=FALSE, fig.cap="Average differences between drug and placebo stratified by centres", fig.width=6, fig.height=3----
+r <- with(d, qualint(change, drug, center, test = "IBGA", plotout = TRUE))
+
 ## ----02-load-------------------------------------------------------------
 source("./urininc.R")
 str(d)
@@ -162,6 +169,8 @@ n <- as.data.frame(n)
 n$strata <- gl(4, 1)
 n$group <- gl(2, 4, labels = c("Experimental", "Placebo"))
 n$group <- relevel(n$group, ref = "Placebo")
+
+## ------------------------------------------------------------------------
 m <- glm(cbind(Dead,Alive) ~ group + strata, data = n, family = binomial,
          contrasts = list(strata = "contr.SAS"))
 car::Anova(m, type = "III")
