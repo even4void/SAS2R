@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-06-09 14:33:18 chl>
+%% Time-stamp: <2016-06-09 14:45:53 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -457,6 +457,15 @@ the kind of model at hand.
 exp(confint(m))
 @ 
 
+
+\subsection{The dose-finding hypertension trial}
+
+\paragraph{Context.} This trial aimed to compare low, medium and high doses of a
+new antihypertensive drug to a placebo. The primary efficacy variable that is
+being considered in this study is diastolic blood pressure.
+
+This example is used to illustrate various methods to deal with multiple testing
+issues. 
 
 \clearpage
 \bibliographystyle{plainnat}
