@@ -1,4 +1,4 @@
-%% Time-stamp: <2016-06-09 14:45:53 chl>
+%% Time-stamp: <2016-07-16 11:49:53 chl>
 \documentclass[10pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
@@ -239,8 +239,8 @@ D <- model.matrix(m)                            ## design matrix
 bhat <- solve(t(D) %*% D) %*% t(D) %*% d$change ## beta parameters
 get.ss <- function(C) {
   require(MASS)
-  teta <- C%*%bhat
-  M <- C %*% ginv(t(D)%*%D) %*% t(C)
+  teta <- C %*% bhat
+  M <- C %*% ginv(t(D) %*% D) %*% t(C)
   SSH <- t(teta) %*% ginv(M) %*% teta
   return(as.numeric(SSH))
 }
@@ -257,8 +257,7 @@ get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10))
 \subfloat[Type III SS]{\label{tab:tab1c}\scalebox{.58}{\input{./s3}}}
 \end{table}
 
-
-The authors later used Gail-Simon test\citep{gail85} to test for qualitative
+The authors later used the Gail-Simon test\citep{gail85} to test for qualitative
 interaction between treatment and strata. The corresponding two-tailed
 Likelihood ratio test is implemented in the
 \href{https://cran.r-project.org/web/packages/QualInt/}{QualInt} package.
@@ -465,7 +464,42 @@ new antihypertensive drug to a placebo. The primary efficacy variable that is
 being considered in this study is diastolic blood pressure.
 
 This example is used to illustrate various methods to deal with multiple testing
-issues. 
+issues. In what follows we will work with $p$-values (raw data are not
+available) estimated when comparing all four groups ($P$, placebo vs. $L$, $M$,
+and $H$, the low, medium and high dose groups).
+
+\begin{table}[!htbp]
+\centering
+\begin{tabular}{lD{.}{.}{-1}D{.}{.}{-1}D{.}{.}{-1}}
+\toprule
+& \multicolumn{1}{c}{$L$ vs. $P$} & \multicolumn{1}{c}{$M$ vs. $P$} & \multicolumn{1}{c}{$H$ vs. $P$}\\
+\midrule
+Scenario 1 & 0.047  & 0.0167 & 0.015\\
+Scenario 2 & 0.047  & 0.027  & 0.015\\
+Scenario 3 & 0.053  & 0.026  & 0.017\\
+\bottomrule
+\end{tabular}
+\caption{$P$-values obtained from different approaches}
+\label{tab:hypert-pvals}
+\end{table}
+
+The \texttt{p.adjust()} command can be used to compute various ``adjusted''
+$p$-values, the default being the step-down method proposed by \cite{holm79}.
+<<>>=
+pvals <- c(0.047, 0.0167, 0.015)
+p.adjust(pvals, method = "bonferroni")
+@ 
+
+The \u{S}id\'ak method is not available in \texttt{p.adjust()} but it is not
+difficult to implement a custom function to perform this correction which
+amounts to update the nominal $\alpha$ level with $1-(1-\alpha)^{1/n}$, that is:
+<<>>=
+f <- function(x) (1-(1-x)^length(x))
+f(pvals)
+@ 
+Alternatively, one can dig into the \texttt{multtest} package
+(\url{htpp://www.bioconductor.org}) which features the \texttt{mt.rawp2adjp()}
+command. 
 
 \clearpage
 \bibliographystyle{plainnat}

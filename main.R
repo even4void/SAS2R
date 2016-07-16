@@ -85,8 +85,8 @@ D <- model.matrix(m)                            ## design matrix
 bhat <- solve(t(D) %*% D) %*% t(D) %*% d$change ## beta parameters
 get.ss <- function(C) {
   require(MASS)
-  teta <- C%*%bhat
-  M <- C %*% ginv(t(D)%*%D) %*% t(C)
+  teta <- C %*% bhat
+  M <- C %*% ginv(t(D) %*% D) %*% t(C)
   SSH <- t(teta) %*% ginv(M) %*% teta
   return(as.numeric(SSH))
 }
@@ -177,4 +177,12 @@ car::Anova(m, type = "III")
 
 ## ------------------------------------------------------------------------
 exp(confint(m))
+
+## ------------------------------------------------------------------------
+pvals <- c(0.047, 0.0167, 0.015)
+p.adjust(pvals, method = "bonferroni")
+
+## ------------------------------------------------------------------------
+f <- function(x) (1-(1-x)^length(x))
+f(pvals)
 
