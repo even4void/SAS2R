@@ -1,5 +1,5 @@
-%% Time-stamp: <2016-07-16 11:49:53 chl>
-\documentclass[10pt,a4paper]{article}
+%% Time-stamp: <2021-01-03 09:58:11 chl>
+\documentclass[10pt,a4paper,svgnames]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage{gitinfo}
 \usepackage{bera}
@@ -11,82 +11,96 @@
 \usepackage{subfig}
 \usepackage[utf8]{inputenc}
 \usepackage[compress]{natbib}
-\newcommand{\R}{\textsf{R}\xspace}
+\usepackage{wallpaper}
+\usepackage{transparent}
 \usepackage[parfill]{parskip}
 \setlength\parindent{0pt}
 \usepackage{hyperref}
-\hypersetup{colorlinks=false, 
-            allbordercolors={0.7 0.7 0.7}, 
-            pdfborderstyle={/S/U/W 1}, 
+\hypersetup{colorlinks=false,
+            allbordercolors={0.7 0.7 0.7},
+            pdfborderstyle={/S/U/W 1},
             pagebackref=true,
-            pdfauthor={Christophe Lalanne},
+            pdfauthor={chl},
             pdfkeywords={SAS, R, Stata, biostatistics, clinical trials}}
 
+\newcommand{\R}{\textsf{R}\xspace}
+
+\newcommand*{\titleLL}{\begingroup%
+\fboxsep 0.5\baselineskip
+\sffamily
+\vspace*{0.1\textheight}
+\centering
+{\textcolor{Coral}{\Huge STATISTICS FOR CLINICAL TRIALS}}\par
+\vspace{0.1\textheight}
+{\transparent{0.5}\colorbox{DarkSlateGray}{\transparent{1}\textcolor{white}{\normalfont\itshape\huge
+                Applications using R}}}\par
+\vspace{0.1\textheight}
+{\LARGE \textcolor{DarkSlateGray}{@even4void}}\par
+\vfill
+{\includegraphics[scale=.75]{logo}\\ {\small \textcolor{DarkSlateGray}{\tt \gitAbbrevHash{}}}}\par
+\vspace*{0.1\textheight}
+\endgroup}
+
+
 \begin{document}
+\thispagestyle{empty}
+
+\ThisTileWallPaper{\paperwidth}{\paperheight}{congruent_pentagon.png}
+\titleLL
+
+\cleardoublepage
+\pagenumbering{arabic}
 
 <<setup, include=FALSE, purl=FALSE>>=
-require(knitr)
+library(knitr)
 knit_hooks$set(document = function(x) {sub('\\usepackage[]{color}', '\\usepackage{xcolor}', x, fixed = TRUE)})
 opts_chunk$set(cache=TRUE, fig.align="center", message=FALSE, warning=FALSE, size="small",
                dev = "cairo_pdf", dev.args = list(family = "Bitstream Vera Sans"))
-@ 
+@
 
-<<echo=FALSE>>=
-library(Hmisc)
+<<echo=FALSE, cache=FALSE>>=
+library(Hmisc)  # also lattice, ggplot2
 library(xtable)
 library(memisc)
 library(rms)
+library(multcomp)
 library(reshape2)
-library(ggplot2)
 library(plyr)
-theme_set(theme_bw())
-@ 
+library(hrbrthemes)
+theme_set(theme_ipsum(base_family = "Bitstream Vera Sans", base_size = 11))
+options(digits = 6, show.signif.stars = FALSE, width = 100)
+@
 
+\topskip0pt
+\vspace*{\fill}
+\begin{quotation}
+\sffamily Statisticians are applied philosophers. Philosophers argue how many angels can dance on the head of a needle; statisticians count them. Or rather, count how many can probably dance. (...) We can predict nothing with certainty but we can predict how uncertain our predictions will be, on average that is. Statistics is the science that tells us how. -- Stephen Senn, \emph{Dicing with Death}
+\end{quotation}
+\vspace*{\fill}
+
+\newpage
 \section*{Foreword}
 
-Statistical analysis carried outwere done using
-\Sexpr{sessionInfo()$R.version$version.string}, which is freely available from
-\href{http://cran.r-project.org}{CRAN}. You may find convenient to run \R
-through \href{http://www.rstudio.com}{RStudio}. RStudio offers really great
-support for editing and running \R scripts. You can even organize your work into
-a project, with version control and automatic reporting built on the fly. I
-personally choose to work like in the 80s-- although I was just a kid at that
-time--with a simple text editor and an interactive shell available within few
-key presses. This is possible thanks to
-\href{https://www.gnu.org/software/emacs/}{Emacs} and the brilliant
-\href{http://ess.r-project.org}{ESS} mode.
+Statistical analysis were done using \Sexpr{sessionInfo()$R.version$version.string}, which is freely available from \href{http://cran.r-project.org}{CRAN}. This document started with earlier versions of R but there will not be any regression testing. You may find convenient to run \R through \href{http://www.rstudio.com}{RStudio}. Indeed, RStudio offers really great support for editing and running \R scripts. You can even organize your work into a project, with version control and automatic reporting built on the fly. I personally choose to work with a simple text editor and an interactive shell available within few key presses. This is possible thanks to \href{https://www.gnu.org/software/emacs/}{Emacs} and the brilliant \href{http://ess.r-project.org}{ESS} mode.
 
-I replicated all SAS code using
-\href{https://www.sas.com/en_us/software/university-edition.html}{SAS University
-  Edition}. It can run locally on your computer (using, e.g.,
-\href{https://www.virtualbox.org}{Virtual Box}) or directly in the cloud. I do
-not hold a personal licence for SAS (although I could get one from several
-universities where I am teaching) and so I found this solution particularly
-handy to compare SAS and R output.
+I no longer hold a personal licence for SAS (although I could probably get an academic one) but you can try to to replicate SAS results using \href{https://www.sas.com/en_us/software/university-edition.html}{SAS University Edition}. It can run locally on your computer using \href{https://www.virtualbox.org}{Virtual Box}). In addition, I provide Stata code to replicate most if not all analyses described in this document. The code has been tested with Stata 13 but should work on any version > 10.
 
-In addition, I provide Stata code to replicate most if not all analyses
-described in this document. The code has been tested with Stata 13 but should
-work on any version > 10.
+Regarding R code, it is plain old R (if this makes any sense), that is we do not rely on the ``tidyverse'' ecosystem of packages to perform data manipulation. Instead, we will be extensively relying on the\texttt{Hmisc}and \texttt{rms} package for data aggregation, tabular outputs, and statistical modeling, as well as well established package, like \texttt{coin}, for permutation tests of statistical hypotheses. SAS being what it is, we will try to mimic the data inputting facilities whenever possible. A custom theme is used in ggplot graphics, thanks to the \texttt{hrbrthemes} package.
 
+\newpage
+\section{Analysis of Clinical Trials}
 
-\section{Analysis of Clinical Trials using SAS}
-
-The following analyses are based on \cite{dmitrienko05}, with data avalaible
-online at \href{https://goo.gl/F5xfWq}{Analysis of Clinical Trials Using SAS: A
-  Practical Guide}. 
+The following analyses are based on \cite{dmitrienko05}, with data available online at \href{https://goo.gl/F5xfWq}{Analysis of Clinical Trials Using SAS: A Practical Guide}. Note that the 2nd edition of this textbook has been published in 2017. In this section, we shall focus on the analysis of continuous and discrete endpoints.
 
 \subsection{The HAMD17 study}
 
-\paragraph{Context.} This is a multicenter clinical trial comparing experimental
-drug vs. placebo in patients with major depression disorder. The outcome is the
-change from baseline after 9 weeks of acute treatment, and efficacy is measured
-using the total score of the Hamilton depression rating scale (17 items).
+\subsubsection{Context}
+This is a multi-center clinical trial comparing experimental drug vs. placebo in patients with major depression disorder. The outcome is the change from baseline after 9 weeks of acute treatment, and efficacy is measured using the total score of the Hamilton depression rating scale (17 items), also known as the HDRS score (or HAMD17 as it is called in this study) \citep{hamilton-1960-ratin}.
 
-This is a classical application of unbalanced design and potential heterogeneity
-between clinical centres, where there is an unequal number of observations per
-treatment (here, drug by center).
+This is a classical application of unbalanced design and potential heterogeneity between clinical centres, where there is an unequal number of observations per treatment (here, drug by center).
 
 Here is one of many ways to get data right into \R:
+
 <<01-load>>=
 raw <- textConnection("
 100 P 18 100 P 14 100 D 23 100 D 18 100 P 10 100 P 17 100 D 18 100 D 22
@@ -109,131 +123,103 @@ d <- as.data.frame(matrix(d, ncol = 3, byrow = TRUE))
 names(d) <- c("center", "drug", "change")
 d$change <- as.numeric(as.character(d$change))
 d$drug <- relevel(d$drug, ref = "P")
-@ 
-Briefly, the idea is to copy and paste the SAS \texttt{DATALINES} instruction as
-raw text and to \texttt{scan} the flow of characters. The next bit of code uses
-\texttt{matrix} to arrange the data into a tabular dataset with 3 columns
-corresponding to center, drug and change score. When transforming this table to
-a data frame, \texttt{center} and \texttt{drug} will be converted to factors but
-we need to handle the proper conversion of \texttt{change} to numerical values.
-Also, note that we set the reference category to the Placebo group to simplify
-things a bit.
+@
 
-Some basic exploratory graphical analysis follows. In the next chunk, we display
-the raw data for each centre and highlight the difference between drug and
-placebo using a trend line (Figure~\ref{fig:hamd-xyplot}). Note the use of
-\texttt{aes(group = 1)} when calling \texttt{geom\_smooth} as there is no real
-grouping variable in the data structure other than the ones that are already
-used (\texttt{drug} on the $x$-axis and \texttt{center} for facetting).
-<<hamd-xyplot, fig.cap="Distribution of change scores in each centre", fig.width=6, fig.height=3>>=
-p <- ggplot(data = d, aes(x = drug, y = change))
-p <- p + geom_jitter(width = .2)
-p <- p + geom_smooth(aes(group = 1), method = "lm", se = FALSE, colour = "grey30")
-p + facet_grid(~ center) + labs(x = "Drug type", y = "HAMD17 change") 
-@ 
+Briefly, the idea is to copy and paste the SAS \texttt{DATALINES} instructions provided in the textbook as raw text and to \texttt{scan} the flow of characters. This works quite well when there is not too much data. Otherwise, it is better to store the data in text file and read it in R directly. The next bit of code uses \texttt{matrix} to arrange the data into a tabular dataset with 3 columns corresponding to center, drug and change score. When transforming this table to a data frame, \texttt{center} and \texttt{drug} will be converted to factors but we need to handle the proper conversion of \texttt{change} to numerical values. Also, note that we set the reference category to the Placebo group to simplify things a bit.
 
-Using \texttt{Hmisc} package, we can easily build a Table of summary statistics
-by drug and center. For simplicity, we will limit the display to the first 3
-centers in Table~\ref{tab:hamd-desc}. 
+\subsubsection{Exploratory data analysis}
+Some basic exploratory graphical analysis follows. In the next chunk, we display the raw data for each centre and highlight the difference between drug and placebo using a trend line (Figure~\ref{fig:hamd-xyplot}). Note the use of \texttt{aes(group = 1)} when calling \texttt{geom\_smooth} as there is no real grouping variable in the data structure other than the ones that are already used (\texttt{drug} on the $x$-axis and \texttt{center} for facetting).
+
+<<hamd-xyplot, fig.cap="Distribution of change scores in each centre", fig.width=8, fig.height=4>>=
+p <- ggplot(data = d, aes(x = drug, y = change)) +
+     geom_jitter(width = .2, color = grey(.3)) +
+     geom_smooth(aes(group = 1), method = "lm", se = FALSE, colour = "lightcoral") +
+     facet_grid(~ center) +
+     labs(x = "Drug type", y = "HAMD17 change")
+p
+@
+
+Using the \texttt{Hmisc} package, we can easily build a Table of summary statistics by drug and center. For simplicity, the display is limited to the first 3 centers in Table~\ref{tab:hamd-desc}. Note that some of the formatting options are handled directly in the \texttt{print} or \texttt{latex} function, which is masked in the following code chunk.
+
 <<>>=
 fm <- change ~ drug + center
-s <- summary(fm, data = subset(d, center %in% c("100","101","102")), 
+s <- summary(fm, data = subset(d, center %in% c("100","101","102")),
              method = "cross", fun = smean.sd)
-@ 
+@
 
 <<echo=FALSE, results="asis">>=
-latex(s, file = "", title = "", caption = "Mean HAMD17 change by drug, center", 
+latex(s, file = "", title = "", caption = "Mean HAMD17 change by drug, center",
       first.hline.double = FALSE, where = "!htbp", label = "tab:hamd-desc",
-      insert.bottom = "Only 3 out of 5 centres are shown.", 
+      insert.bottom = "Only 3 out of 5 centres are shown.",
       table.env = TRUE, ctable = TRUE, size = "small", digits = 2)
-@ 
+@
 
+Let us consider the average change scores by center, which are displayed in Figure~\ref{fig:hamd-delta}. First, we need to compute the average score in each group, and then compute the difference between the two (\texttt{delta}). This could be done with the \texttt{plyr} package and its \texttt{ddply} command, but we will rely on the Hmisc \texttt{summarize} command. What is important is that the results are returned as a data frame to facilitate the use of \texttt{ggplot} data structure in turn.
 
-Now, let's consider average change scores by center, which are displayed in
-Figure~\ref{fig:hamd-delta}. First, we need to compute the average score in each
-group, and then compute the difference between the two (called \texttt{delta}).
-This could be done with Hmisc \texttt{summarize} command, but we will rely on
-the \texttt{plyr} package and its \texttt{ddply} command. What is important is
-that the results are returned as a data frame to facilitate the use of
-\texttt{ggplot} data structure in turn.
-<<hamd-delta, fig.cap="Average difference between drug and placebo in each centre", fig.width=6, fig.height=3>>=
-r <- ddply(d, "center", summarize, 
-           delta = mean(change[drug == "D"]) - mean(change[drug == "P"]))
-p <- ggplot(data = r, aes(x = center, y = delta))
-p <- p + geom_point() + geom_hline(yintercept = 0, linetype = 2, colour = "grey30")
-p + labs(x = "Center", y = "Difference D-P")
-@ 
+<<hamd-delta, fig.cap="Average difference between drug and placebo in each centre", fig.width=8, fig.height=4>>=
+m <- with(d, Hmisc::summarize(change, llist(drug, center), mean))
+r <- aggregate(change ~ center, m, diff)
+p <- ggplot(data = r, aes(x = center, y = change)) +
+     geom_point() +
+     geom_hline(yintercept = 0, linetype = 2, colour = grey(.3)) +
+     labs(x = "Center", y = "Difference D-P")
+p
+@
 
+\subsubsection{Statistical model}
+Now comes the modeling stage. First, we will analyse the primary endpoint using fixed-effect models. \citet{dmitrienko05} provide all the maths that are necessary to understand how to derive various types of sum of squares, and this is further addressed in, e.g., \citep{christensen-2002-plane-answer}. Let us first update the formula we used for producing Table~\ref{tab:hamd-desc} to allow for an interaction term between \texttt{drug} and \texttt{center}, which is denoted as \texttt{drug:center} in \R. Of note, in \R, \texttt{drug * center} will expand to \texttt{drug + center + drug:center}:
 
-Now comes the modeling stage. First, we will analyse the primary endpoint using
-fixed-effect models. \citet{dmitrienko05} provide all the maths that are
-necessary to understand how to derive various types of sum of squares, and this
-is further addressed in, e.g., REF., or on
-\href{http://crossvalidated.com}{Stack Exchange}.
-% FIXME: add references
-
-Let us first update the formula we used for producing Table~\ref{tab:hamd-desc} to
-incorporate an interaction term, \texttt{drug:center} (in \R, \texttt{drug *
-  center} will expand to \texttt{drug + center + drug:center}):
 <<>>=
 fm <- change ~ drug * center
-@ 
-
-<<>>=
 replications(change ~ drug:center, data = d)
-@ 
+@
+
 As can be seen, data are slightly imbalanced for all but centre 101.
 
-By default, \R computes so-called ``sequential'' Type I sum of squares (SS), and
-here is what we get when using a standard combination of \texttt{lm} (to compute
-parameter estimates) and \texttt{anova} (to build the ANOVA table for the
-regression model):
+By default, \R computes so-called ``sequential'' Type I sum of squares (SS), and here is what we get when using a standard combination of \texttt{lm} (to compute parameter estimates) and \texttt{anova} (to build the ANOVA table for the regression model):
+
 <<>>=
 options(contrasts = c("contr.sum", "contr.poly"))
 m <- lm(fm, data = d)
 anova(m)
-@ 
+@
 
-The \texttt{car} package allows to work with Type II and Type III SS. Type III
-SSs, also called partial or Yates' weighted squares of means are the default in
-Stata, SPSS or SAS. Stata does not even offer Type II SS.
-So, if we are interested in computing Type II sum of squares in \R, we could
-call \texttt{Anova} like this:
+A more pleasant ANOVA table can be obtained using the \texttt{rms} package, e.g.:
+
+<<eval=FALSE>>=
+anova(ols(fm, d))
+@
+
+The \texttt{car} package allows to work with both Type II and Type III SS. Type III SSs, also called partial or Yates' weighted squares of means are the default in Stata, SPSS or SAS. Stata does not even offer Type II SS. So, if we are interested in computing Type II sum of squares in \R using \texttt{car}, we could call \texttt{Anova} like this:
+
 <<>>=
 car::Anova(m, type = "II")
-@ 
+@
 
-Type III analysis is readily obtained by replacing \texttt{type = "II"} with
-\texttt{type = "III"} as shown in the next code block. It should be noted that
-without altering the default contrast treatment that are used by \R, as we did
-in the above chunk, we would not get the correct results for the Type III
-analysis.
+Type III analysis is readily obtained by replacing \texttt{type = "II"} with \texttt{type = "III"} as shown in the next code block. It should be noted that without altering the default contrast treatment that are used by \R, as we did in the above chunk, we would not get the correct results for the Type III analysis:
+
 <<>>=
 car::Anova(m, type ="III")
-@ 
-Note that in the case of Type III SS, we can also use the base command
-\texttt{drop1} and we will get similar results:
+@
+
+Note that in the case of Type II SS, we can also use the base command \texttt{drop1} and we will get similar results:
+
 <<>>=
 drop1(m, scope = ~ ., test = "F")
-@ 
+@
 
-To sum up, the results from the different approaches are exposed in
-Table~\ref{tab:hamd-fixeff}. 
+To sum up, the results from the different approaches are exposed in Table~\ref{tab:hamd-fixeff}.
+
+% FIXME Try texreg or memisc
 
 <<echo=FALSE>>=
-print(xtable(anova(m)), file = "s1.tex", floating = FALSE, booktabs = TRUE)
+print(xtable(anova(m)[,c(2,1,4,5)]), file = "s1.tex", floating = FALSE, booktabs = TRUE)
 print(xtable(car::Anova(m, type = "II")), file = "s2.tex", floating = FALSE, booktabs = TRUE)
 print(xtable(car::Anova(m, type = "III")[-1,]), file = "s3.tex", floating = FALSE, booktabs = TRUE)
-@ 
+@
 
+\paragraph{Remark.} Here is how we could compute the parameter estimates and the SS corresponding to the drug effect in the case of a Type III analysis. The code follows what was posted on \href{http://stats.stackexchange.com/a/69367/930}{Stack Exchange}, with minor adaptation. How this works is quite simple: We first get the design matrix stored in our model \texttt{m} and then solve the normal equations $(X'X) \hat \beta = X'y$ in order to get $\hat \beta = (X'X)^{-1}X'y$.
 
-\paragraph{Sidenote.} Here is how we could compute the parameter estimates and
-the SS corresponding to the drug effect in the case of a Type III analysis. The
-code follows that posted on
-\href{http://stats.stackexchange.com/a/69367/930}{Stack Exchange}, with minor
-adaptation. How this works is quite simple: We first get the design matrix
-stored in our model \texttt{m} and then solve the ``normal equations''
-$(X'X)\hat\beta=X'y$ in order to get $\hat\beta=(X'X)^{-1}X'y$. 
 <<>>=
 D <- model.matrix(m)                            ## design matrix
 bhat <- solve(t(D) %*% D) %*% t(D) %*% d$change ## beta parameters
@@ -245,191 +231,190 @@ get.ss <- function(C) {
   return(as.numeric(SSH))
 }
 ## SS(drug|center,drug:center)
-get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10)) 
-@ 
+get.ss(matrix(c(0,1,0,0,0,0,0,0,0,0), nrow = 1, ncol = 10))
+@
 
 \begin{table}[!htbp]
 \centering
 \caption{Overview of fixed-effects analysis for the HAMD17 study}
 \label{tab:hamd-fixeff}
-\subfloat[Type I SS]{\label{tab:tab1a}\scalebox{.58}{\input{./s1}}}\quad
-\subfloat[Type II SS]{\label{tab:tab1b}\scalebox{.58}{\input{./s2}}}
-\subfloat[Type III SS]{\label{tab:tab1c}\scalebox{.58}{\input{./s3}}}
+\subfloat[Type I SS]{\label{tab:tab1a}\scalebox{.64}{\input{./s1}}}\quad
+\subfloat[Type II SS]{\label{tab:tab1b}\scalebox{.64}{\input{./s2}}}
+\subfloat[Type III SS]{\label{tab:tab1c}\scalebox{.64}{\input{./s3}}}
 \end{table}
 
-The authors later used the Gail-Simon test\citep{gail85} to test for qualitative
-interaction between treatment and strata. The corresponding two-tailed
-Likelihood ratio test is implemented in the
-\href{https://cran.r-project.org/web/packages/QualInt/}{QualInt} package.
+Regarding specific contrast, like the average treatment difference, here is one way to compute the corresponding estimate and its standard error using the \texttt{multcomp} package:
+
+<<>>=
+summary(glht(m, mcp(drug = "Tukey", interaction_average = TRUE)))
+@
+
+% TODO Explain why it is correct in the case of Type III SS.
+
+Another approach relies on fitting a random-effect model to this dataset, whereby specifically the stratum and treatment-by-stratum interaction effects are treated as random while the treatment effect is considered fixed. Two main packages are available in \R to fit such models, \texttt{nlme} and \texttt{lme4}. A detailed overview of the two packages is available on \href{https://rpsychologist.com/r-guide-longitudinal-lme-lmer}{Kristoffer Magnusson}'s website. Here are the results obtained using the former:
+
+<<>>=
+library(nlme)
+m <- lme(change ~ drug, data = d, random = ~ 1 | center/drug)
+summary(m)
+@
+
+Contrary to the SAS formula used in the textbook, no Satterthwaite correction is applied on the degrees of freedom. It is, however, possible to use it with \texttt{lme4}. First, we need to refit the model using lme4::lmer
+
+<<>>=
+library(lme4)
+library(lmerTest)
+m <- lmer(change ~ drug + (1 | center/drug), data = d)
+summary(m, ddf = "Satterthwaite")  # this is the default
+@
+
+The authors later used the Gail-Simon test\citep{gail85} to test for qualitative interaction between treatment and strata. The corresponding two-tailed Likelihood ratio test is implemented in the \href{https://cran.r-project.org/web/packages/QualInt/}{QualInt} package.
+
 <<>>=
 library(QualInt)
 with(d, qualint(change, drug, center, test = "LRT"))
-@ 
-This R package even provides a graphical method when specifying options
-\texttt{test = "IBGA"} and \texttt{plotout = TRUE} (Figure~\ref{fig:hamd-ibga}).
-The IBGA method relies on simultaneous 95\% confidence intervals as described in
-\citet{pan97}. 
+@
+
+This R package even provides a graphical method when specifying options \texttt{test = "IBGA"} and \texttt{plotout = TRUE} (Figure~\ref{fig:hamd-ibga}). The IBGA method relies on simultaneous 95\% confidence intervals as described in \citet{pan97}. The \texttt{multcomp} package also allows for simultaneous CIs albeit they are often used for testing multiple contrasts in ANOVA-like settings.
+
+% FIXME Can't we really change the default color scale, e.g. add + scale_color_ipsum()?
 
 <<hamd-ibga, echo=FALSE, fig.cap="Average differences between drug and placebo stratified by centres", fig.width=6, fig.height=3>>=
-r <- with(d, qualint(change, drug, center, test = "IBGA", plotout = TRUE))
-@ 
+r <- with(d, qualint(change, drug, center, test = "IBGA"))
+plot(r) # + scale_colour_ipsum()
+@
 
 \subsection{The Urinary incontinence trial}
 
-\paragraph{Context.} This is a subset of data collected in an RCT on urinary
-incontinence where the primary endpoint was the percent change from baseline
-of number of incontinence episodes per week over an 8-week period. Patients were
-initially randomized into one of three strata depending on the baseline
-frequency of incontinence episodes.
+\paragraph{Context.} This is a subset of data collected in an RCT on urinary incontinence where the primary endpoint was the percent change from baseline of number of incontinence episodes per week over an 8-week period. Patients were initially randomized into one of three strata depending on the baseline frequency of incontinence episodes.
 
 This is an example of the use of stratified non-parametric analysis.
 
-This time, we managed to get data in the right format using this little R
-script: \texttt{urininc.R}. Assuming it is located in the current working
-directory, we can \texttt{source} it into \R and we will get a data frame named
-\texttt{d}. 
-<<02-load>>=
-source("./urininc.R")
-str(d)
-@ 
+This time, we managed to get data in the right format using this little R script: \texttt{urininc.R}. Assuming it is located in an \texttt{R/} folder in the current working directory, we can \texttt{source} it into \R and we will get a data frame named \texttt{d}.
 
-To summarize the data, we can again make use of \texttt{Hmisc} \texttt{summary}
-for ``crossed'' data.
+<<02-load>>=
+source("R/urininc.R")
+str(d)
+@
+
+To summarize the data, we can again make use of \texttt{Hmisc} \texttt{summary} for ``crossed'' data.
+
 <<>>=
 s <- summary(change ~ group + strata, data = d, method = "cross", overall = FALSE)
-@ 
+@
 
 <<echo=FALSE, results="asis">>=
-latex(s, file = "", title = "", caption = "Mean change in number of incontinence episods by drug, strata", 
+latex(s, file = "", title = "", caption = "Mean change in number of incontinence episods by drug, strata",
       first.hline.double = FALSE, where = "!htbp", label = "tab:urininc-desc",
       table.env = TRUE, ctable = TRUE, size = "small", digits = 3)
-@ 
+@
 
-As can be seen, there is a higher number of missing values in strata 2 (around
-20\% in both groups) and larger variations on average between the two group in
-the third strata. Next, we displayed the distribution of the percent change in
-frequency of incontinence episodes as density curves in
-Figure~\ref{fig:urininc-density}. Instead of relying on \texttt{geom\_density},
-we use the rather generic \texttt{geom\_lines} with an extra \texttt{stat=} parameter.
+As can be seen, there is a higher number of missing values in strata 2 (around 20\% in both groups) and larger variations on average between the two groups in the third strata. Next, we displayed the distribution of the percent change in frequency of incontinence episodes as density curves in Figure~\ref{fig:urininc-density}. Instead of relying on \texttt{geom\_density}, we use the rather generic \texttt{geom\_lines} with an extra \texttt{stat=} parameter.
 
 <<urininc-density, fig.cap="Density estimates for the percent change in frequency of incontinence episodes", fig.width=9, fig.height=3>>=
-p <- ggplot(data = d, aes(x = change, colour = group))
-p <- p + geom_line(stat = "density", adjust = 1.2) + facet_grid(~ strata)
-p + scale_x_continuous(limits = c(-100, 150)) + labs(x = "Percent change", y = "Density")
-@ 
+p <- ggplot(data = d, aes(x = change, color = group)) +
+     geom_line(stat = "density", adjust = 1.2) +
+     facet_wrap(~ strata, ncol = 3) +
+     scale_color_manual("Group", values = c("steelblue", "orange")) +
+     scale_x_continuous(limits = c(-100, 150)) +
+     labs(x = "Percent change", y = "Density")
+p
+@
 
-The authors used the van Elteren test \citep{elteren60}, which can be regarded
-as an extension of the Wilcoxon rank sum test for stratified data where larger
-weights are assigned to rank sums from smaller strata. An alternative is the
-``aligned rank test'' proposed by \cite{hodges62} as discussed by
-\cite{mehrotra10}. In \R, there is an old version that is
-\href{https://stat.ethz.ch/pipermail/r-help/2005-August/078171.html}{mentionned
-  on the \R listserve} (August 2005), but for now we will use the \texttt{coin}
-package as shown below:
+The authors used the van Elteren test \citep{elteren60}, which can be regarded as an extension of the Wilcoxon rank sum test for stratified data where larger weights are assigned to rank sums from smaller strata. An alternative is the ``aligned rank test'' proposed by \cite{hodges62} as discussed by \cite{mehrotra10}. In \R, there is an old version that is \href{https://stat.ethz.ch/pipermail/r-help/2005-August/078171.html}{mentionned on the \R listserve} (August 2005), but for now we will use the \texttt{coin} package as shown below:
+
 <<>>=
 library(coin)
 dc <- subset(d, complete.cases(d))
-independence_test(change ~ group | strata, data = dc, 
-                  ytrafo = function(data) trafo(data, numeric_trafo = rank, 
-                                                block = dc$strata), 
+independence_test(change ~ group | strata, data = dc,
+                  ytrafo = function(data) trafo(data, numeric_trafo = rank,
+                                                block = dc$strata),
                   teststat = "quad")
-@ 
+@
 
-Although we get different results from the authors, we would reach the same
-conclusion, namely that there is an effect of the treatment on the outcome after
-adjusting for the centre effect. We will get, however, closer results
-($p=0.02369$ for the row mean squares test statistic) if we simply remove the
-\texttt{scores=} option when calling SAS \texttt{PROC FREQ} \citep{stokes12}:
+Although we get different results as those reported by the authors, we would reach the same conclusion, namely that there is an effect of the treatment on the outcome after adjusting for the centre effect. We will get, however, closer results ($p=0.02369$ for the row mean squares test statistic) if we simply remove the \texttt{scores=} option when calling SAS \texttt{PROC FREQ} \citep{stokes12}:
+
 \begin{verbatim}
 PROC FREQ;
   TABLES strata*group*change / noprint cmh2;
 RUN;
 \end{verbatim}
 
-In comparison, as noted by the authors, a Type III ANOVA would yield
-non-significant result about the effect of drug on change scores.
+In comparison, as noted by the authors, a Type III ANOVA would yield non-significant result about the effect of drug on change scores:
+
 <<>>=
 m <- lm(change ~ group + strata, data = d)
 car::Anova(m, type = "III")
-@ 
+@
 
 
 \subsection{The Severe sepsis trial}
 
-\paragraph{Context.} This is a placebo-controlled RCT examining the effect of an
-experimental drug on 28-day all-cause mortality in patients with severe sepsis.
-Patients were allocated to one of four strata depending on their APACHE II score
-\citep{knaus85}.
+\paragraph{Context.} This is a placebo-controlled RCT examining the effect of an experimental drug on 28-day all-cause mortality in patients with severe sepsis. Patients were allocated to one of four strata depending on their APACHE II score \citep{knaus85}.
 
-This is a classical application of stratified analysis of a binary outcome
-(dead/alive). 
+This is a classical application of stratified analysis of a binary outcome (dead/alive).
 
-To enter the data in \R, we will input individual values of the three-way Table
-of events as an array. Note that it would also be possible to create two matrix
-objects and then bind into to a 3-dimensional table. In what follows, we write
-data for the treated group first. Note that when using \texttt{array}, data
-should be entered column-wise (there is no \texttt{byrow =} option as in
-\texttt{matrix}). 
+To enter the data in \R, we will input individual values of the three-way Table of events as an array. Note that it would also be possible to create two matrix objects and then bind into to a 3-dimensional table. In what follows, we write data for the treated group first. Note that when using \texttt{array}, data should be entered column-wise (there is no \texttt{byrow =} option as in \texttt{matrix}).
+
 <<03-load>>=
 varnames <- list(strata = 1:4,
                  status = c("Dead", "Alive", "Total"),
                  group = c("Experimental", "Placebo"))
-                 
 d <- array(c(33,49,48,80,185,169,156,130,218,218,204,210,
              26,57,58,118,189,165,104,123,215,222,162,241),
            dim = c(4,3,2), dimnames = varnames)
-@ 
-Note also that the third column (``Total'') can be safely omitted as margins can be
-computed automatically with \R, e.g.:
+@
+
+Note also that the third column (``Total'') can be safely omitted as margins can be computed automatically with \R, e.g.:
+
 <<eval=FALSE>>=
 addmargins(d[,-3,], c(1,2))
-@ 
+@
 
 <<>>=
 d <- d[,-3,]
 dim(d)
-@ 
+@
 
-An alternative representation of this array-based Table is provided by \R's flat
-tables (\texttt{ftable}), in long or wide format; see
-Table~\ref{tab:sepsis-desc} for the wide format using \texttt{ftable(d,
-  row.vars = 1, col.vars = c(3,2))}:
+An alternative representation of this array-based Table is provided by \R's flat tables (\texttt{ftable}), in long or wide format; see Table~\ref{tab:sepsis-desc} for the wide format using \texttt{ftable(d, row.vars = 1, col.vars = c(3,2))}:
+
 <<>>=
 ftable(d)
-@ 
+@
 
-% NOTE: We could use xtable(format(...)) instead of memisc::toLatex but this
-% would need additional formatting
+% NOTE: We could use xtable(format(...)) instead of memisc::toLatex but this would need additional formatting
+
 \begin{table}[!htbp]
 \centering
 <<echo=FALSE, results="asis">>=
-toLatex(ftable(d, row.vars = 1, col.vars = c(3,2)))
-@ 
+toLatex(ftable(d, row.vars = 1, col.vars = c(3,2)), digits = 0)
+@
 \caption{28-day mortality data from the 1690-patient sepsis study}
 \label{tab:sepsis-desc}
 \end{table}
 
 The following code is used to depict the situation in graphical terms:
-<<sepsis-dotplot, fig.cap="Proportion of patients who died by the end of the study", fig.width=6, fig.height=6>>=
+
+<<sepsis-dotplot, fig.cap="Proportion of patients who died by the end of the study", fig.width=8, fig.height=4>>=
 dd <- as.data.frame(ftable(d))
 r <- ddply(dd, c("strata", "group"), mutate, prop = Freq/sum(Freq))
-p <- ggplot(subset(r, status == "Dead"), aes(x = prop, y = group))
-p <- p + geom_point() + facet_wrap(~ strata, nrow = 2)
-p + scale_x_continuous(limits = c(0,0.5)) + labs(x = "Proportion deads", y = "")
-@ 
+p <- ggplot(subset(r, status == "Dead"), aes(x = prop, y = group)) +
+     geom_point() + facet_wrap(~ strata, nrow = 2) +
+     scale_x_continuous(limits = c(0,0.5)) +
+     labs(x = "Proportion deads", y = "")
+p
+@
 
 
-% FIXME: say someting about panel = {cotab_assoc | cotab_coindep
-<<sepsis-cotab, fig.cap="Conditional association plot", fig.width=8, fig.height=8, out.width=".75\\linewidth">>=
-library(vcd)
-cotabplot(d, 1)
-@ 
+% FIXME Say someting about panel = {cotab_assoc | cotab_coindep
 
-Based on a logistic regression model, the authors presented a summary of a Type
-III analysis of effects. Here is what can be done in R. First, we will slightly
-re arrange the data table so that we have a working data frame with total counts
-for success (here, dead patients) and failure (here, patients still alive) in
-separate columns, together with columns describing strata and treatment levels.
+% <<sepsis-cotab, fig.cap="Conditional association plot", out.width=".5\\linewidth">>=
+% library(vcd)
+% cotabplot(d, 1)
+% @
+
+Based on a logistic regression model, the authors presented a summary of a Type III analysis of effects. Here is what can be done in R. First, we will slightly re arrange the data table so that we have a working data frame with total counts for successes (here, dead patients) and failure (patients still alive) in separate columns, together with columns describing strata and treatment levels.
+
 <<>>=
 n <- rbind(d[,1:2,1], d[,1:2,2])
 rownames(n) <- NULL
@@ -437,36 +422,27 @@ n <- as.data.frame(n)
 n$strata <- gl(4, 1)
 n$group <- gl(2, 4, labels = c("Experimental", "Placebo"))
 n$group <- relevel(n$group, ref = "Placebo")
-@ 
-Then, wince we are working with grouped or aggregated data, we will use the
-\texttt{cbind()} option to R's \texttt{glm}, as shown below. Note that we also
-ask to use SAS treatment contrast for the \texttt{strata} factor, in order to
-ensure that the fourth level is used as the reference category. Type III
-analysis is readily available within the \texttt{car} package.
+@
+
+Then, since we are working with grouped or aggregated data, we will use the \texttt{cbind()} option in R's \texttt{glm} function , as shown below. Note that we also ask to use SAS treatment contrast for the \texttt{strata} factor, in order to ensure that the fourth level is used as the reference category. Type III analysis is readily available within the \texttt{car} package.
+
 <<>>=
 m <- glm(cbind(Dead,Alive) ~ group + strata, data = n, family = binomial,
          contrasts = list(strata = "contr.SAS"))
 car::Anova(m, type = "III")
-@ 
+@
 
-Finally, profile likelihood 95\% confidence intervals are simply obtained using
-\texttt{confint()} which will call the appropriate profile method depending on
-the kind of model at hand.
+Finally, profile likelihood 95\% confidence intervals are simply obtained using \texttt{confint()} which will call the appropriate profile method depending on the kind of model at hand:
+
 <<>>=
 exp(confint(m))
-@ 
-
+@
 
 \subsection{The dose-finding hypertension trial}
 
-\paragraph{Context.} This trial aimed to compare low, medium and high doses of a
-new antihypertensive drug to a placebo. The primary efficacy variable that is
-being considered in this study is diastolic blood pressure.
+\paragraph{Context.} This trial aimed to compare low, medium and high doses of a new antihypertensive drug to a placebo. The primary efficacy variable that is being considered in this study is diastolic blood pressure.
 
-This example is used to illustrate various methods to deal with multiple testing
-issues. In what follows we will work with $p$-values (raw data are not
-available) estimated when comparing all four groups ($P$, placebo vs. $L$, $M$,
-and $H$, the low, medium and high dose groups).
+This example is used to illustrate various methods to deal with multiple testing issues. In what follows we will work with $p$-values (raw data are not available) estimated when comparing all four groups ($P$, placebo vs. $L$, $M$, and $H$, the low, medium and high dose groups).
 
 \begin{table}[!htbp]
 \centering
@@ -483,23 +459,116 @@ Scenario 3 & 0.053  & 0.026  & 0.017\\
 \label{tab:hypert-pvals}
 \end{table}
 
-The \texttt{p.adjust()} command can be used to compute various ``adjusted''
-$p$-values, the default being the step-down method proposed by \cite{holm79}.
-<<>>=
-pvals <- c(0.047, 0.0167, 0.015)
-p.adjust(pvals, method = "bonferroni")
-@ 
+The \texttt{p.adjust()} command can be used to compute various ``adjusted'' $p$-values, the default being the step-down method proposed by \cite{holm79}.
 
-The \u{S}id\'ak method is not available in \texttt{p.adjust()} but it is not
-difficult to implement a custom function to perform this correction which
-amounts to update the nominal $\alpha$ level with $1-(1-\alpha)^{1/n}$, that is:
+<<>>=
+pvals <- c(0.047, 0.0167, 0.015)  ## scenario 1
+p.adjust(pvals, method = "bonferroni")
+@
+
+The \u{S}id\'ak method is not available in \texttt{p.adjust()} but it is not difficult to implement a custom function to perform this correction which amounts to update the nominal $\alpha$ level with $1-(1-\alpha)^{1/n}$, that is:
+
 <<>>=
 f <- function(x) (1-(1-x)^length(x))
 f(pvals)
-@ 
-Alternatively, one can dig into the \texttt{multtest} package
-(\url{htpp://www.bioconductor.org}) which features the \texttt{mt.rawp2adjp()}
-command. 
+@
+
+Alternatively, one can dig into the \texttt{multtest} package by \citet{dudoit08}, available on \url{htpp://www.bioconductor.org}) (see the \texttt{mt.rawp2adjp()} command).
+
+Contrary to the preceding results, Holm's adjusted $p$-values will all be $<0.05$ as illustrated below:
+
+<<>>=
+p.adjust(pvals, method = "holm")
+@
+
+And here is a comparison of Holm and Hommel's adjusted $p$-values for the second scenario (Table~\ref{tab:hypert-pvals}):
+
+<<>>=
+pvals <- c(0.047, 0.027, 0.015)  ## scenario 2
+p.adjust(pvals, method = "holm")
+p.adjust(pvals, method = "hommel")
+@
+
+Finally, Hommel's method is compared to Hochberg's approach for the third scenario:
+
+<<>>=
+pvals <- c(0.053, 0.026, 0.017)  ## scenario 3
+p.adjust(pvals, method = "hochberg")
+p.adjust(pvals, method = "hommel")
+@
+
+One can also look into the \texttt{cherry} package \citep{goeman11} whose vignette includes a comparison of Simes vs. Hommel or Fisher approach to multiple testing, as well as examples of closed testing methods.
+
+
+\subsection{The allergen-induced asthma trial}
+
+\paragraph{Context.} Data comes from a trial designed to assess the efficacy profile of a bronchodilator in allergen-induced asthma. There are 20 patients that were randomly assigned to receive either an experimental drug or a placebo \citep{taylor91}. The forced expiratory volume in one second (FEV) was used to measure how the drug attenuated bronchoconstriction, and FEV curves were averaged at each time point in both groups (Table~\ref{tab:fev}). The therapeutic effect was the time to the onset of action--that is, the first time point at which clinically and statistically significant separation between the FEV curves is observed.
+
+Beside stepwise approaches relying on data-driven ordering of $p$-values--this is also known as closed testing--fixed-sequence testing methods are used when we are interested in prespecified sequences of hypotheses. This is illustrated in the next example.
+
+\begin{table}[!htbp]
+\centering
+\begin{tabular}{ccrrcrr}
+\toprule
+  \multicolumn{1}{c}{} & \multicolumn{3}{c}{Experimental drug} & \multicolumn{3}{c}{Placebo} \\
+  \cline{2-7} \\
+  Time (hours) & n & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{SD} & n & \multicolumn{1}{c}{Mean} & \multicolumn{1}{c}{SD} \\
+  \midrule
+  0.25 & 10 & 0.58 & 0.29 & 10 & 0.71 & 0.35 \\
+  0.5  & 10 & 0.62 & 0.31 & 10 & 0.88 & 0.33 \\
+  0.75 & 10 & 0.51 & 0.33 & 10 & 0.73 & 0.36 \\
+  1    & 10 & 0.34 & 0.27 & 10 & 0.68 & 0.29 \\
+  2    & 10 & -0.06 & 0.22 & 10 & 0.37 & 0.25 \\
+  3    & 10 & 0.05 & 0.23 & 10 & 0.43 & 0.28 \\
+  \bottomrule
+\end{tabular}
+\caption{Reduction in FEV measurements from baseline by time after the allergen challenge}
+\label{tab:fev}
+\end{table}
+
+To load the data, we will use a simple matrix to store the values displayed in Table~\ref{tab:fev} and then reshape the matrix to a so-called ``tidy'' data frame using \texttt{melt}, although this last step is not really necessary.
+
+<<>>=
+tmp <- matrix(c(0.25,10,0.58,0.29,10,0.71,0.35,
+                0.5,10,0.62,0.31,10,0.88,0.33,
+                0.75,10,0.51,0.33,10,0.73,0.36,
+                1,10,0.34,0.27,10,0.68,0.29,
+                2,10,-0.06,0.22,10,0.37,0.25,
+                3,10,0.05,0.23,10,0.43,0.28),
+                nrow = 6, byrow = TRUE)
+colnames(tmp) <- c("time", "N0", "Mean0", "SD0", "N1", "Mean1", "SD1")
+d <- melt(as.data.frame(tmp), id.vars = 1, measure.vars = c(3,4,6,7))
+@
+
+Note that it is quite easy to go back to the matrix form by using \texttt{dcast} as shown below:
+
+<<>>=
+r <- ddply(dcast(d, time ~ variable), "time", mutate,
+           diff = Mean1 - Mean0, se = sqrt((1/10+1/10)*(SD0^2+SD1^2)/2))
+@
+
+In what follows, we compute the lowest bound of a 95\% confidence interval and display its value at consecutive time points. This amounts to looking at results from sequential testing, i.e. determine the first statistically significant difference. Equivalently, we could rely on simple Student $t$-test.
+
+<<fev-xyplot, fig.cap="Treatment comparisons in the asthma study", fig.width=8, fig.height=4>>=
+p <- ggplot(r, aes(x = time, y = diff))
+p <- p + geom_line() + geom_point()
+p <- p + geom_line(aes(x = time, y = diff - qt(0.95, 20-2) * se), linetype = 2)
+p <- p + scale_x_continuous(breaks = seq(0, 3, by = 1))
+p <- p + scale_y_continuous(breaks = seq(-0.2, 0.5, by = 0.1))
+p <- p + geom_hline(aes(yintercept = 0))
+p + labs(x = "Time (hours)", y = "Treatment difference (95% Lower CI)")
+@
+
+Note that to display error bars instead of the lower bound for the 95\% confidence interval, we would use:
+
+<<eval = FALSE>>=
+p <- p + geom_errorbar(aes(ymin = diff - qt(0.975, 20-2) * se,
+                           ymax = diff + qt(0.975, 20-2) * se),
+                       width = .1)
+@
+
+This approach, however, does not control the familywise error rate. Looking at treatment differences from the last measurement to the first (``step-down'' approach) suggests that a significant difference at one hour, and not 30 minutes as in the previous case.
+
 
 \clearpage
 \bibliographystyle{plainnat}

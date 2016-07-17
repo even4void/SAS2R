@@ -1,0 +1,14 @@
+* Task list [4/9]
+- [X] #stata sepsis.do
+- [ ] #stata asthma.do
+- [ ] data/asthma.{csv,dta}
+- [ ] data/sepsis.{csv,dta}
+- [ ] Check and complete section 1
+- [ ] Update TeX template
+- [X] Update ggplot2 theme
+- [X] Remove plyr dependency
+- [X] Linting + cleanup
+
+* Inbox
+** TODO Check the sepsis study (why logistic reg instead of survival model?)
+** TODO Merge local bibliography with centralized Bibtex file

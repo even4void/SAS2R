@@ -26,5 +26,5 @@ table drug center, contents(count change mean change sd change) column format(%5
 /* two-way ANOVA
  * Stata does not offer type II SS, the defualt are type III (like SAS)
  */
-anova change drug##center, sequential 
+anova change drug##center, sequential
 anova change drug##center
